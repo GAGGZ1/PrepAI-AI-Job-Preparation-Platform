@@ -1,39 +1,75 @@
 const pdfParse = require("pdf-parse")
 const { generateInterviewReport, generateResumePdf } = require("../services/ai.service")
 const interviewReportModel = require("../models/interviewReport.model")
+const crypto = require("crypto");
+const redisClient = require("../config/redis");
 
+/**
+ * @description Function to generate cache key for interview report based on userId, resume, job description and self description.
+ */
+const getCacheKey = ({ userId, resume, jobDescription, selfDescription }) => {
+  const hash = crypto
+    .createHash("sha256")
+    .update(`${resume}|${jobDescription}|${selfDescription}`)
+    .digest("hex");
 
+  return `interviewReport:${userId}:${hash}`;
+};
 
+const getResumePdfCacheKey = (interviewReportId) => `resumePdf:${interviewReportId}`;
 
 /**
  * @description Controller to generate interview report based on user self description, resume and job description.
+ * The controller first checks if a cached report exists for the given input. If it does, it returns the cached report. If not, it generates a new report using the AI service, saves it to the database, caches it in Redis, and returns the new report.
  */
 async function generateInterViewReportController(req, res) {
+  const resumeContent = await (new pdfParse.PDFParse(Uint8Array.from(req.file.buffer))).getText();
+  const { selfDescription, jobDescription } = req.body;
+  const userId = req.user.id;
 
-    const resumeContent = await (new pdfParse.PDFParse(Uint8Array.from(req.file.buffer))).getText()
-    const { selfDescription, jobDescription } = req.body
+  const cacheKey = getCacheKey({
+    userId,
+    resume: resumeContent.text,
+    jobDescription,
+    selfDescription,
+  });
 
-    const interViewReportByAi = await generateInterviewReport({
-        resume: resumeContent.text,
-        selfDescription,
-        jobDescription
-    })
+  const cached = await redisClient.get(cacheKey);
+  if (cached) {
+     console.log("CACHE HIT:", cacheKey);
+    return res.status(200).json({
+     
+      message: "Interview report fetched from cache.",
+      interviewReport: JSON.parse(cached),
+      cached: true,
+    });
+  }
 
-    const interviewReport = await interviewReportModel.create({
-        user: req.user.id,
-        resume: resumeContent.text,
-        selfDescription,
-        jobDescription,
-        ...interViewReportByAi
-    })
+  console.log("CACHE MISS:", cacheKey);
 
-    res.status(201).json({
-        message: "Interview report generated successfully.",
-        interviewReport
-    })
 
+  const interviewReportByAi = await generateInterviewReport({
+    resume: resumeContent.text,
+    selfDescription,
+    jobDescription,
+  });
+
+  const interviewReport = await interviewReportModel.create({
+    user: userId,
+    resume: resumeContent.text,
+    selfDescription,
+    jobDescription,
+    ...interviewReportByAi,
+  });
+
+  await redisClient.setEx(cacheKey, 3600, JSON.stringify(interviewReport));
+
+  res.status(201).json({
+    message: "Interview report generated successfully.",
+    interviewReport,
+    cached: false,
+  });
 }
-
 /**
  * @description Controller to get interview report by interviewId.
  */
@@ -83,9 +119,24 @@ async function generateResumePdfController(req, res) {
         })
     }
 
-    const { resume, jobDescription, selfDescription } = interviewReport
+    const cacheKey = getResumePdfCacheKey(interviewReportId)
+    const cachedPdfBase64 = await redisClient.get(cacheKey)
 
+    if (cachedPdfBase64) {
+        const pdfBuffer = Buffer.from(cachedPdfBase64, "base64")
+
+        res.set({
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename=resume_${interviewReportId}.pdf`
+        })
+
+        return res.send(pdfBuffer)
+    }
+
+    const { resume, jobDescription, selfDescription } = interviewReport
     const pdfBuffer = await generateResumePdf({ resume, jobDescription, selfDescription })
+
+    await redisClient.setEx(cacheKey, 24 * 60 * 60, pdfBuffer.toString("base64"))
 
     res.set({
         "Content-Type": "application/pdf",
@@ -94,5 +145,10 @@ async function generateResumePdfController(req, res) {
 
     res.send(pdfBuffer)
 }
+
+
+
+
+
 
 module.exports = { generateInterViewReportController, getInterviewReportByIdController, getAllInterviewReportsController, generateResumePdfController }
