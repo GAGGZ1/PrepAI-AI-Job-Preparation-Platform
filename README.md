@@ -23,9 +23,7 @@ An AI-powered interview preparation platform that helps candidates practice and 
 - **Interview Reports**: Detailed analysis and feedback on interview performance
 - **File Upload**: Support for resume and document uploads
 - **Rate Limiting**: Protect API endpoints with intelligent rate limiting using Redis
-- **Job Queue System**: Asynchronous processing of interview analysis using Bull
 - **User Blacklist**: Security feature to manage user access
-- **Logging**: Comprehensive logging with Winston
 - **PDF Parsing**: Extract and analyze PDF documents
 - **Web Automation**: Browser automation capabilities with Puppeteer
 
@@ -38,14 +36,13 @@ An AI-powered interview preparation platform that helps candidates practice and 
 - **Cache**: Redis
 - **Authentication**: JWT (JSON Web Tokens)
 - **AI Integration**: Google GenAI API
-- **Job Queue**: Bull
 - **Validation**: Zod
 - **File Handling**: Multer
-- **PDF Processing**: pdf-parse
-- **Browser Automation**: Puppeteer
-- **Logging**: Winston
+
 - **Password Hashing**: bcryptjs
 - **Rate Limiting**: express-rate-limit + rate-limit-redis
+- **PDF Processing**: pdf-parse
+- **Browser Automation**: Puppeteer
 
 ### Frontend
 - **Framework**: React 19
@@ -255,7 +252,6 @@ npm run preview
 4. **Service Layer**: Business logic (AI integration, interview logic)
 5. **Model Layer**: Database schemas and queries
 6. **Config Layer**: Database and external service configuration
-7. **Worker Layer**: Async job processing with Bull
 
 ### Frontend Architecture
 
