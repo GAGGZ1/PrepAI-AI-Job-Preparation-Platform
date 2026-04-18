@@ -323,4 +323,89 @@ const generateResumePdf = async ({ jobDescription, resume, selfDescription }) =>
   return pdfBuffer;
 };
 
-module.exports = { generateInterviewReport, generateResumePdf };
+const additionalQuestionsJsonSchema = {
+  type: "object",
+  properties: {
+    questions: {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        properties: {
+          question: { type: "string" },
+          intention: { type: "string" },
+          answer: { type: "string" },
+        },
+        required: ["question", "intention", "answer"],
+      },
+    },
+  },
+  required: ["questions"],
+  additionalProperties: false,
+};
+
+const additionalQuestionsZodSchema = z.object({
+  questions: z.array(
+    z.object({
+      question: z.string(),
+      intention: z.string(),
+      answer: z.string(),
+    }),
+  ),
+});
+
+const buildAdditionalQuestionsPrompt = ({ resume, jobDescription, selfDescription, existingQuestions, type, count }) => {
+  const questionLabel = type === "behavioral" ? "behavioral" : "technical";
+  const existingList = existingQuestions
+    .map((item, index) => `${index + 1}. ${item.question}`)
+    .join("\n");
+
+  return `You are an expert interview coach.
+
+Use the candidate context below to generate ${count} additional ${questionLabel} interview questions.
+
+Resume:
+${resume}
+
+Job Description:
+${jobDescription}
+
+Self Description:
+${selfDescription}
+
+Existing ${questionLabel} questions:
+${existingList}
+
+Instructions:
+- Generate ${count} new ${questionLabel} questions that are not duplicates of the existing list.
+- For each question, include a brief intention statement and a model answer.
+- Return valid JSON only with a single field named "questions".
+- Do not include markdown, comments, or extra fields.
+
+Output structure:
+{
+  "questions": [
+    {"question": string, "intention": string, "answer": string}
+  ]
+}
+`;
+};
+
+async function generateAdditionalInterviewQuestions({ resume, jobDescription, selfDescription, existingQuestions, type, count = 3 }) {
+  const prompt = buildAdditionalQuestionsPrompt({ resume, jobDescription, selfDescription, existingQuestions, type, count });
+
+  const data = await generateWithRetry({
+    model: "gemini-3-flash-preview",
+    contents: prompt,
+    config: {
+      temperature: 0.35,
+      responseMimeType: "application/json",
+    },
+    responseJsonSchema: additionalQuestionsJsonSchema,
+    validationSchema: additionalQuestionsZodSchema,
+  });
+
+  return data.questions;
+};
+
+module.exports = { generateInterviewReport, generateResumePdf, generateAdditionalInterviewQuestions };

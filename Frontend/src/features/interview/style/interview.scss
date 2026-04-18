@@ -119,6 +119,7 @@ $severity-low: #3fb950;
     max-height: calc(100vh - 3rem);
     padding-bottom: 5rem;
     align-items: flex-start;
+    position: relative;
 
 
 
@@ -475,5 +476,30 @@ $severity-low: #3fb950;
         color: $severity-low;
         background-color: rgba($severity-low, 0.1);
         border-color: rgba($severity-low, 0.25);
+    }
+}
+
+// ── Loading Overlay ───────────────────────────────────────────────────────────
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba($bg-page, 0.8);
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    z-index: 10;
+    border-radius: 0.6rem;
+
+    p {
+        font-size: 1rem;
+        color: $text-primary;
+        margin: 0;
+        font-weight: 500;
     }
 }

@@ -52,4 +52,11 @@ interviewRouter.post(
   interviewController.generateResumePdfController,
 );
 
+interviewRouter.post(
+  "/:interviewReportId/questions",
+  authMiddleware.authUser,
+  apiRateLimiter,
+  interviewController.loadMoreQuestionsController,
+);
+
 module.exports = interviewRouter;

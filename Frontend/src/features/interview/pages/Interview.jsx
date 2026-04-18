@@ -61,7 +61,7 @@ const RoadMapDay = ({ day }) => (
 // ── Main Component ────────────────────────────────────────────────────────────
 const Interview = () => {
     const [ activeNav, setActiveNav ] = useState('technical')
-    const { report, getReportById, loading, getResumePdf,  resumeLoading  } = useInterview()
+    const { report, getReportById, loading, getResumePdf, resumeLoading, loadMoreQuestions, questionLoading } = useInterview()
     const { interviewId } = useParams()
 
     useEffect(() => {
@@ -85,6 +85,14 @@ const Interview = () => {
         report.matchScore >= 80 ? 'score--high' :
             report.matchScore >= 60 ? 'score--mid' : 'score--low'
 
+    const handleLoadMore = async (type) => {
+        if (!interviewId) return
+        try {
+            await loadMoreQuestions({ interviewReportId: interviewId, type, count: 3 })
+        } catch (error) {
+            console.log(error)
+        }
+    }
 
     return (
         <div className='interview-page'>
@@ -117,6 +125,12 @@ const Interview = () => {
 
                 {/* ── Center Content ── */}
                 <main className='interview-content'>
+                    {questionLoading && (
+                        <div className='loading-overlay'>
+                            <LoadingIndicator />
+                            <p>Loading more questions...</p>
+                        </div>
+                    )}
                     {activeNav === 'technical' && (
                         <section>
                             <div className='content-header'>
@@ -127,6 +141,15 @@ const Interview = () => {
                                 {report.technicalQuestions.map((q, i) => (
                                     <QuestionCard key={i} item={q} index={i} />
                                 ))}
+                            </div>
+                            <div className='load-more-actions'>
+                                <button
+                                    className='button secondary-button'
+                                    onClick={() => handleLoadMore('technical')}
+                                    disabled={questionLoading}
+                                >
+                                    {questionLoading ? 'Loading more...' : 'Load more technical questions'}
+                                </button>
                             </div>
                         </section>
                     )}
@@ -141,6 +164,15 @@ const Interview = () => {
                                 {report.behavioralQuestions.map((q, i) => (
                                     <QuestionCard key={i} item={q} index={i} />
                                 ))}
+                            </div>
+                            <div className='load-more-actions'>
+                                <button
+                                    className='button secondary-button'
+                                    onClick={() => handleLoadMore('behavioral')}
+                                    disabled={questionLoading}
+                                >
+                                    {questionLoading ? 'Loading more...' : 'Load more behavioral questions'}
+                                </button>
                             </div>
                         </section>
                     )}
