@@ -128,7 +128,7 @@ prep-ai/
 
 ### 1. Clone the repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/GAGGZ1/PrepAI-AI-Job-Preparation-Platform.git
 cd prep-ai
 ```
 
